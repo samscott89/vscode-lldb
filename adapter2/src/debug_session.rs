@@ -1024,7 +1024,7 @@ impl DebugSession {
         // Launch!
         let result = match &self.debuggee_terminal {
             Some(t) => t.attach(|| self.target.launch(&launch_info)),
-            None => self.target.launch(&launch_info)
+            None => self.target.launch(&launch_info),
         };
 
         let process = match result {
@@ -2352,28 +2352,57 @@ impl DebugSession {
     fn handle_target_event(&mut self, event: &SBTargetEvent) {
         let flags = event.as_event().flags();
         if flags & SBTargetEvent::BroadcastBitModulesLoaded != 0 {
-            // Running scripts during target execution seems to trigger a bug in LLDB,
-            // so we defer loaded module notification till the next stop.
             for module in event.modules() {
-                let mut message = format!("Module loaded: {}.", module.filespec().path().display());
-                let symbols = module.symbol_filespec();
-                if symbols.is_valid() {
-                    message.push_str(" Symbols loaded.");
-                }
-                self.console_message(message);
+                self.send_event(EventBody::module(ModuleEventBody {
+                    reason: "new".to_owned(),
+                    module: self.make_module_resp(&module),
+                }));
 
+                // Running scripts during target execution seems to trigger a bug in LLDB,
+                // so we defer loaded module notification till next stop.
                 self.loaded_modules.push(module);
             }
         } else if flags & SBTargetEvent::BroadcastBitSymbolsLoaded != 0 {
             for module in event.modules() {
-                self.console_message(format!("Symbols loaded: {}", module.symbol_filespec().path().display()));
+                self.send_event(EventBody::module(ModuleEventBody {
+                    reason: "changed".to_owned(),
+                    module: self.make_module_resp(&module),
+                }));
             }
         } else if flags & SBTargetEvent::BroadcastBitModulesUnloaded != 0 {
             for module in event.modules() {
-                let message = format!("Module Unloaded: {}", module.filespec().path().display());
-                self.console_message(message);
+                self.send_event(EventBody::module(ModuleEventBody {
+                    reason: "removed".to_owned(),
+                    module: Module {
+                        id: serde_json::Value::String(self.module_load_address(&module)),
+                        ..Default::default()
+                    },
+                }));
             }
         }
+    }
+
+    fn module_load_address(&self, module: &SBModule) -> String {
+        format!("{:X}", module.object_header_address().load_address(&self.target))
+    }
+
+    fn make_module_resp(&self, module: &SBModule) -> Module {
+        let load_address = self.module_load_address(module);
+        let mut resp = Module {
+            id: serde_json::Value::String(load_address.clone()),
+            name: module.filespec().filename().display().to_string(),
+            path: Some(module.filespec().path().display().to_string()),
+            address_range: Some(load_address),
+            ..Default::default()
+        };
+        let symbols = module.symbol_filespec();
+        if symbols.is_valid() {
+            resp.symbol_status = Some("Symbols loaded.".into());
+            resp.symbol_file_path = Some(module.symbol_filespec().path().display().to_string());
+        } else {
+            resp.symbol_status = Some("Symbols not found".into())
+        }
+        resp
     }
 
     fn handle_breakpoint_event(&mut self, event: &SBBreakpointEvent) {
