@@ -124,12 +124,14 @@ happens in these steps:
 |**name**           |string  |Y| Launch configuration name.
 |**type**           |string  |Y| Set to `lldb`.
 |**request**        |string  |Y| Set to `custom`.
+|**initCommands**   |[string]| | LLDB commands executed upon debugger startup.
 |**targetCreateCommands**  |[string]| | Commands that create the debug target.
 |**processCreateCommands** |[string]| | Commands that create the debuggee process.
 |**exitCommands**   |[string]| | LLDB commands executed at the end of debugging session.
 |**expressions**    |string| | The default expression evaluator type: `simple`, `python` or `native`.  See [Expressions](#expressions).
 |**sourceMap**      |dictionary| | See [Source Path Remapping](#source-path-remapping).
 |**sourceLanguages**| A list of source languages used in the program.  This is used to enable language-specific debugger features.
+|**reverseDebugging**|bool| Enable [reverse debugging](#reverse-debugging)
 
 ## Remote debugging
 
@@ -183,10 +185,15 @@ target modules load --file ${workspaceFolder}/build/debuggee -s <base load addre
 ```
 
 ## Reverse Debugging
-[Reverse debugging](https://en.wikipedia.org/wiki/Time_travel_debugging) (also known as "Time-travel debugging") is
-the ability to reverse the flow of debuggee execution to an earlier state.
+[Reverse debugging](https://en.wikipedia.org/wiki/Time_travel_debugging) is the ability to reverse the flow of debuggee
+execution to an earlier state.  Provided you use a debugging backend that supports this feature, CodeLLDB can send
+reverse-step and reverse-continue commands to it.
 
-### Example
+Currently, two such backends are known to work to some extent:
+- [gdb](https://sourceware.org/gdb/onlinedocs/gdb/Process-Record-and-Replay.html), version 7 or later,
+- [rr](https://rr-project.org/), version 5.3 or later.
+
+### Example (rr)
 Record execution trace:
 ```sh
 rr record <debuggee> <arg1> ...
