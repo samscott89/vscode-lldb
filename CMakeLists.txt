@@ -232,6 +232,8 @@ foreach(AdapterType ${TestAdapters})
     add_dependencies(check check_${AdapterType})
 endforeach(AdapterType)
 
+add_dependencies(check_native cargo_test)
+
 # Install
 
 install(CODE "file(REMOVE_RECURSE \"${CMAKE_INSTALL_PREFIX}/vscode-lldb\")")
@@ -243,6 +245,8 @@ install(
 # XtraClean
 
 add_custom_target(xclean
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
+    COMMAND ${CMAKE_COMMAND} -E remove_directory CMakeFiles
     COMMAND ${CMAKE_COMMAND} -E remove_directory adapter
     COMMAND ${CMAKE_COMMAND} -E remove_directory adapter2
     COMMAND ${CMAKE_COMMAND} -E remove_directory debuggee

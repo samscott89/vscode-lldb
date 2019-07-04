@@ -1,11 +1,11 @@
-# list(
-#    <list>               ## list name
+# add_copy_file(
+#    <list>               ## list name to add output path to
 #    <input>              ## source file path
 #    <output>             ## destination file path
 # )
 
 # add_copy_files_to(
-#    <list>               ## list name
+#    <list>               ## list name to add output paths to
 #    <destination_dir>    ## destination directory path
 #    <file0> <file1> ...  ## list of files
 # )
