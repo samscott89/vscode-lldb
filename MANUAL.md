@@ -1,3 +1,33 @@
+<style>
+/* Tooltip container */
+tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+tooltip detail {
+  visibility: hidden;
+  width: max-content;
+  max-width:30em;
+  text-align: left;
+  padding: 0.5em 0.5em;
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 6px;
+
+  position: absolute;
+  z-index: 1;
+  top: -5px;
+  left: 105%;
+}
+
+/* Reveal on hover */
+tooltip:hover detail {
+  visibility: visible;
+}
+</style>
 
 # Table of Contents
 
@@ -8,7 +38,7 @@
     - [Custom Launch](#custom-launch)
     - [Remote Debugging](#remote-debugging)
     - [Reverse Debugging](#reverse-debugging)
-    - [Loading a Core Dump](#loading-a-core-dump)
+    - [Loading Core Dump](#loading-core-dump)
     - [Source Path Remapping](#source-path-remapping)
     - [Parameterized Launch Configurations](#parameterized-launch-configurations)
 - [Debugger Features](#debugger-features)
@@ -64,17 +94,13 @@ At the end of the debug session `exitCommands` sequence is executed.
 
 ### Stdio
 The **stdio** property is a list of redirection targets for each of debuggee's stdio streams:
-- `null` (default) will connect stream to a terminal (as specified by the **terminal** launch property)<sup>1</sup>.
-- `"/some/path"` will cause stream to be redirected to the specified file, pipe or a TTY device <sup>2</sup>.
+- `null` (default) will connect stream to the default terminal (as specified by the **terminal** launch property)
+- `"/some/path"` will cause stream to be redirected to the specified file, pipe or a <tooltip>TTY device<detail>Use `tty` command inside a terminal window to find out its TTY device path.</detail></tooltip>.
 
 For example, `"stdio": [null, null, "/tmp/my.log"]` will connect stdin and stdout to a terminal, while sending
 stderr to the specified file.
 - A scalar value will configure all three streams identically: `"stdio": null`.
 - You may also use dictionary syntax: `"stdio": { "stdin": null, "stdout": null, "stderr": "/tmp/my.log" }`.
-
-<sup>1</sup> On Windows debuggee is always launched in a new window, however stdio streams may still be redirected
-as described above.<br>
-<sup>2</sup> Use `tty` command inside a terminal window to find out its TTY device path.
 
 ## Attaching
 
@@ -131,7 +157,7 @@ happens in these steps:
 |**expressions**    |string| | The default expression evaluator type: `simple`, `python` or `native`.  See [Expressions](#expressions).
 |**sourceMap**      |dictionary| | See [Source Path Remapping](#source-path-remapping).
 |**sourceLanguages**| A list of source languages used in the program.  This is used to enable language-specific debugger features.
-|**reverseDebugging**|bool| Enable [reverse debugging](#reverse-debugging)
+|**reverseDebugging**|bool| | Enable [reverse debugging](#reverse-debugging).
 
 ## Remote debugging
 
@@ -160,9 +186,7 @@ If you require additional configuration of the remote system, you may use `preRu
 to execute commands such as `platform mkdir`, `platform put-file`, `platform shell`, etc.
 (See `help platform` for a list of available platform commands).
 
-### Connecting to a gdbserver-style agent
-(This includes not just gdbserver itself, but also environments that implement the gdbserver protocol,
- such as [OpenOCD](http://openocd.org/), [QEMU](https://www.qemu.org/), [rr](https://rr-project.org/), and others)
+### Connecting to a gdbserver-style <tooltip>agent<detail>This includes not just gdbserver itself, but also execution environments that implement the gdbserver protocol, such as [OpenOCD](http://openocd.org/), [QEMU](https://www.qemu.org/), [rr](https://rr-project.org/), and others</detail></tooltip>
 
 - Start remote agent. For example, run `gdbserver *:<port> <debuggee> <debuggee args>` on the remote machine.
 - Create a custom launch configuration:
@@ -185,15 +209,17 @@ target modules load --file ${workspaceFolder}/build/debuggee -s <base load addre
 ```
 
 ## Reverse Debugging
-[Reverse debugging](https://en.wikipedia.org/wiki/Time_travel_debugging) is the ability to reverse the flow of debuggee
-execution to an earlier state.  Provided you use a debugging backend that supports this feature, CodeLLDB can send
-reverse-step and reverse-continue commands to it.
+[Reverse debugging](https://en.wikipedia.org/wiki/Time_travel_debugging), is the ability to revert the flow of debuggee
+execution to an earlier state.
 
-Currently, two such backends are known to work to some extent:
-- [gdb](https://sourceware.org/gdb/onlinedocs/gdb/Process-Record-and-Replay.html), version 7 or later,
-- [rr](https://rr-project.org/), version 5.3 or later.
+Provided you use a debugging backend that supports [this feature](https://sourceware.org/gdb/onlinedocs/gdb/Packets.html#bc), CodeLLDB can send reverse-step and reverse-continue commands to it.
 
-### Example (rr)
+At the moment, the only tested backend is [Mozilla's rr](https://rr-project.org/) (you will need version 5.3 or later).
+There are others mentioned [here](http://www.sourceware.org/gdb/news/reversible.html) and [here](https://github.com/mozilla/rr/wiki/Related-work).
+[QEMU](https://www.qemu.org/) reportedly [supports record/replay](https://github.com/qemu/qemu/blob/master/docs/replay.txt) in full system emulation mode.
+If you get any of them to work, please let me know!
+
+### Example (using rr)
 Record execution trace:
 ```sh
 rr record <debuggee> <arg1> ...
@@ -215,7 +241,7 @@ rr replay -s <port>
 }
 ```
 
-## Loading a Core Dump
+## Loading Core Dump
 Use custom launch with `target crate -c <core path>` command:
 ```javascript
 {
